@@ -26,7 +26,6 @@ dropping = False
 has_matched = False
 pending_undo = False
 should_undo = False
-matches = {}
 
 board = []
 for row in range(columns):
@@ -106,17 +105,18 @@ def drop_tiles(x, y):
     board[0][y] = 0
 
 def check_matches():
-    global board, dropping, has_matched, should_undo, matches
+    global board, dropping, has_matched, should_undo
 
     matches = {}
     matches[5] = []
+    matches['special'] = []
     matches[4] = []
     matches[3] = []
     if dropping or enabled:
         return
     has_matched = False
 
-    # vertical matches
+    # vertical combos
     for y in range(rows):
         temp_x = []
         last_type = 0
@@ -142,7 +142,7 @@ def check_matches():
             has_matched = True
             should_undo = False
 
-    # horizontal matches
+    # horizontal combos
     for x in range(columns):
         temp_y = []
         last_type = 0
@@ -167,11 +167,24 @@ def check_matches():
             matches[len(temp_y)].append(temp_y)
             has_matched = True
             should_undo = False
+
+    # if 2 len(3) lines overlap
+    #     add their items in matches['special']
+    #     remove those items from matches[3]
+    # if a len(3) line overlaps with a len(4) line
+    #     depending on where the overlap is on the len(4) line
+    #         add all items from the len(4) line except for the furthest one from overlap ([0,1] - 3, [2,3] - 0)
+    #         add the items from the len(3) line
+    # if 2 len(4) lines overlap
+    #     depending on where the overlap is on the len(4) lines
+    #         add all items from the len(4) lines except for the furthest ones from overlap ([0,1] - 3, [2,3] - 0)
     
-    # overlaps
+    # overlaps, L combos and T combos
+    for key in matches.keys():
+        for i in range(len(matches[key])):
+            pass
 
-    # T and L matches
-
+    # clear combos
     for key in matches.keys():
         for match in matches[key]:
             for v, h in match:
