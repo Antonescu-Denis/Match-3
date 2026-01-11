@@ -40,7 +40,13 @@
     <Content Include="images\5.png" />
     <Content Include="images\6.png" />
     <Content Include="images\7.png" />
-    <Content Include="images\cell_bg.png" />
+    <Content Include="images\cell1.png" />
+    <Content Include="images\cell2.png" />
+    <Content Include="images\cell3.png" />
+    <Content Include="images\cell4.png" />
+    <Content Include="images\cell5.png" />
+    <Content Include="images\cell6.png" />
+    <Content Include="images\cell7.png" />
     <Content Include="images\disabled_h.png" />
     <Content Include="images\disabled_v.png" />
     <Content Include="images\select_h.png" />

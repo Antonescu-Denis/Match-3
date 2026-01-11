@@ -26,12 +26,14 @@ dropping = False
 has_matched = False
 pending_undo = False
 should_undo = False
+matches = {}
+coords = {}
 
 board = []
 for row in range(columns):
     tiles = []
     for _ in range(rows):
-        tiles.append(random.randint(3, count))
+        tiles.append(random.randint(1, count))
     board.append(tiles)
 
 
@@ -44,7 +46,7 @@ def draw():
         for x in range(rows):
             tile = board[y][x]
             if tile:
-                screen.blit('cell_bg', (x*tile_size+offset+2, y*tile_size+offset+2))
+                screen.blit(f"cell{tile}", (x*tile_size+offset+2, y*tile_size+offset+2))
                 screen.blit(str(tile), (x*tile_size+offset, y*tile_size+offset))
     cursor.draw()
 
@@ -104,19 +106,58 @@ def drop_tiles(x, y):
         board[row][y] = board[row-1][y]
     board[0][y] = 0
 
+def fill_coords(temp):
+    global coords
+    
+    for thing in temp:
+        if thing in coords.keys():
+            coords[thing] += 1
+        else:
+            coords[thing] = 1
+
+def special_matches():
+    global board, dropping, has_matched, should_undo, matches, coords, enabled
+
+    pass
+    # for each combo
+    #     for each item in combo
+    #         if there's any len(3) line combo intersecting/perpendicular
+    #         check if it's actually a len(4)
+    #             if intersection
+    #                 if both len(3)
+    #                     add set with those items
+    #                 if len(3) and len(4)
+    #                     for len(4) check where it overlaps
+    #                     and pick furthest item from that in len(4)
+    #                 if both len(4)
+    #                     for len(4) check where it overlaps for both
+    #                     and pick furthest item from that in both len(4)
+    #             if perpendicular
+    #                 if both len(3)
+    #                     pick the furthest item from perpendicular line
+    #                 if len(3) and len(4)
+    #                     if len(3) is current line
+    #                         pick the furthest 2 items from perpendicular line
+    #                     if len(4) is current line
+    #                         pick the furthest item from perpendicular line
+    #                 if both len(4)
+    #                     pick the furthest 2 items from perpendicular line
+    #                     pick the furthest item from current line
+
 def check_matches():
-    global board, dropping, has_matched, should_undo
+    global board, dropping, has_matched, should_undo, matches, coords, enabled
 
     matches = {}
     matches[5] = []
     matches['special'] = []
     matches[4] = []
     matches[3] = []
+    coords = {}
+
     if dropping or enabled:
         return
     has_matched = False
 
-    # vertical combos
     for y in range(rows):
         temp_x = []
         last_type = 0
@@ -124,6 +165,7 @@ def check_matches():
             if board[x][y] != 0:
                 if len(temp_x) == 5:
                     matches[5].append(temp_x)
+                    fill_coords(temp_x)
                     has_matched = True
                     should_undo = False
                     temp_x = []
@@ -132,6 +174,7 @@ def check_matches():
                 else:
                     if len(temp_x) >= 3:
                         matches[len(temp_x)].append(temp_x)
+                        fill_coords(temp_x)
                         has_matched = True
                         should_undo = False
                     temp_x = []
@@ -139,10 +182,10 @@ def check_matches():
                     last_type = board[x][y]
         if len(temp_x) >= 3:
             matches[len(temp_x)].append(temp_x)
+            fill_coords(temp_x)
             has_matched = True
             should_undo = False
 
-    # horizontal combos
     for x in range(columns):
         temp_y = []
         last_type = 0
@@ -150,6 +193,7 @@ def check_matches():
             if board[x][y] != 0:
                 if len(temp_y) == 5:
                     matches[5].append(temp_y)
+                    fill_coords(temp_y)
                     has_matched = True
                     should_undo = False
                     temp_y = []
@@ -158,6 +202,7 @@ def check_matches():
                 else:
                     if len(temp_y) >= 3:
                         matches[len(temp_y)].append(temp_y)
+                        fill_coords(temp_y)
                         has_matched = True
                         should_undo = False
                     temp_y = []
@@ -165,6 +210,7 @@ def check_matches():
                     last_type = board[x][y]
         if len(temp_y) >= 3:
             matches[len(temp_y)].append(temp_y)
+            fill_coords(temp_y)
             has_matched = True
             should_undo = False
 
@@ -179,16 +225,17 @@ def check_matches():
     #     depending on where the overlap is on the len(4) lines
     #         add all items from the len(4) lines except for the furthest ones from overlap ([0,1] - 3, [2,3] - 0)
     
-    # overlaps, L combos and T combos
-    for key in matches.keys():
-        for i in range(len(matches[key])):
-            pass
+    
 
     # clear combos
+    print('----------')
     for key in matches.keys():
+        print(f"{key}:")
         for match in matches[key]:
+            print(f"    {match}")
             for v, h in match:
                 board[v][h] = 0
+    print('----------')
 
 def check_gaps():
     global board, rotated, dropping

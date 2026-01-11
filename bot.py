@@ -1,3 +1,5 @@
+from main import *
+
 # patterns for bot to match (any orientation):
 # region
 #     3 combo:
