@@ -3,21 +3,21 @@ from PIL import Image
 import os
 
 
-rows = 10
-columns = 10
+rows = 11
+columns = 11
 tile_size = 60
-count = 7
+count = 4
 
 TITLE = 'game'
-WIDTH = (rows+1) * tile_size
-HEIGHT = (columns+1) * tile_size
+WIDTH = (rows+2) * tile_size
+HEIGHT = (columns+2) * tile_size
 
-offset = tile_size//2
+offset = tile_size*1.5
 cursor = Actor('disabled_h', topleft = (offset, offset))
-img = Image.open('images/_bg.png')
+img = Image.open('images/bg.png')
 img = img.resize((WIDTH, HEIGHT))
-img = img.save('images/_resized.png')
-bg = Actor('_resized')
+img = img.save('images/resized.png')
+bg = Actor('resized')
 
 rotated = False
 pos_x, pos_y = 0, 0
@@ -30,24 +30,26 @@ matches = {}
 coords = {}
 
 board = []
+thing = 6
 for row in range(columns):
     tiles = []
     for _ in range(rows):
         tiles.append(random.randint(1, count))
     board.append(tiles)
 
-
 def draw():
     global board
 
     screen.clear()
     bg.draw()
-    for y in range(columns):
-        for x in range(rows):
-            tile = board[y][x]
-            if tile:
-                screen.blit(f"cell{tile}", (x*tile_size+offset+2, y*tile_size+offset+2))
-                screen.blit(str(tile), (x*tile_size+offset, y*tile_size+offset))
+    for x in range(columns):
+        for y in range(rows):
+            tile = board[x][y]
+            if tile < 10:
+                screen.blit(f"cell{tile}", (y*tile_size+offset+2, x*tile_size+offset+2))
+                screen.blit(str(tile), (y*tile_size+offset, x*tile_size+offset))
+            else:
+                screen.blit(str(tile%10), (y*tile_size+offset, x*tile_size+offset))
     cursor.draw()
 
 def on_key_down(key):
@@ -55,6 +57,7 @@ def on_key_down(key):
 
     if not enabled:
         return
+
     if (key == keys.LEFT or key == keys.A) and pos_y > 0:
         cursor.x -= tile_size
         pos_y -= 1
@@ -69,25 +72,21 @@ def on_key_down(key):
         if (not rotated and pos_x < columns-1) or (rotated and pos_x < columns-2):
             cursor.y += tile_size
             pos_x += 1
+
     if key == keys.R:
         if not rotated:
             cursor.image = 'select_v'
-            cursor.x -= offset
-            cursor.y += offset
             rotated = True
-
             if pos_x == rows-1:
                 cursor.y -= tile_size
                 pos_x -= 1
         else:
             cursor.image = 'select_h'
-            cursor.x += offset
-            cursor.y -= offset
             rotated = False
-
             if pos_y == columns-1:
                 cursor.x -= tile_size
                 pos_y -= 1
+
     if key == keys.SPACE or key == keys.RETURN:
         if rotated:
             board[pos_x][pos_y], board[pos_x+1][pos_y] = board[pos_x+1][pos_y], board[pos_x][pos_y]
@@ -99,12 +98,85 @@ def on_key_down(key):
         pending_undo = True
         should_undo = True
 
-def drop_tiles(x, y):
-    global board
+def special_matches():
+    global board, dropping, has_matched, should_undo, matches, coords, enabled
 
-    for row in range(x, 0, -1):
-        board[row][y] = board[row-1][y]
-    board[0][y] = 0
+    for key in range(4, 2, -1):
+        if len(matches[key]) < 1:
+            continue
+        for curr_combo in matches[key]:
+            is_horizontal = True
+            for i in range(1, key):
+                if curr_combo[0][0] != curr_combo[i][0]:
+                    is_horizontal = False
+                    break
+            if not is_horizontal:
+                continue
+            tiles_above = curr_combo[0][0]
+            tiles_below = rows-1 - curr_combo[0][0]
+            for i in range(key):
+                tile_x = curr_combo[i][0]
+                tile_y = curr_combo[i][1]
+                if coords[curr_combo[i]] == 2:
+                    temp = curr_combo[:]
+                    above = 0
+                    for n in range(1, min(tiles_above, 3)+1):
+                        if board[tile_x-n][tile_y] == board[tile_x][tile_y]:
+                            above += 1
+                            temp.append((tile_x-n, tile_y))
+                        else:
+                            break
+                    below = 0
+                    for n in range(1, min(tiles_below, 3)+1):
+                        if board[tile_x+n][tile_y] == board[tile_x][tile_y]:
+                            below += 1
+                            temp.append((tile_x+n, tile_y))
+                        else:
+                            break
+
+                    if 2 < above+below+1 and above+below+1 < 5:
+                        removals = []
+                        for temp_key in range(4, 2, -1):
+                            for j in range(len(matches[temp_key])):
+                                for item in temp:
+                                    if item in matches[temp_key][j]:
+                                        removals.insert(0, j)
+                                        break
+                        for thing in removals:
+                            matches[temp_key].remove(matches[temp_key][thing])
+                        matches['special'].append(temp[:])
+                        #for i in range(len(temp)):
+                        #    print(f"----- {temp[i]} -----")
+                        # somehow skip to the next iteration
+                else:
+                        pass
+
+    #        if there's any len(3) line combo intersecting/perpendicular
+    #        check if it's actually a len(4) by checking the item right before and right after the found len(3)
+    #            if found combo is intersecting curr_combo
+    #                if both are len(3)
+    #                    add those items to set
+    #                if one is len(3) and one is len(4)
+    #                    add all items from len(3) to set
+    #                    for len(4), check where it overlaps
+    #                    add all its items to set, except the furthest from intersection
+    #                if both are len(4)
+    #                    check where it overlaps for both
+    #                    add all their items to set, except the furthest ones from intersection
+    #            if found combo is perpendicular to curr_combo
+    #                if both are len(3)
+    #                    for current combo, add all its items to set
+    #                    for found combo, add all its items to set, except the furthest from curr_combo
+    #                if one is len(3) and one is len(4)
+    #                    if len(3) is current combo
+    #                        for current combo, add all its items to set
+    #                        for found combo, add all its items to set, except the 2 furthest from curr_combo
+    #                    if len(4) is current line
+    #                        for current combo, add all its items to set, except the furthest from perpendicular combo
+    #                        for found combo, add all its items to set, except the furthest from curr_combo
+    #                if both are len(4)
+    #                    for current combo, add all its items to set, except the furthest from perpendicular combo
+    #                    for found combo, add all its items to set, except the 2 furthest from curr_combo
 
 def fill_coords(temp):
     global coords
@@ -114,35 +186,6 @@ def fill_coords(temp):
             coords[thing] += 1
         else:
             coords[thing] = 1
-
-def special_matches():
-    global board, dropping, has_matched, should_undo, matches, coords, enabled
-
-    pass
-    # for each combo
-    #     for each item in combo
-    #         if there's any len(3) line combo intersecting/perpendicular
-    #         check if it's actually a len(4)
-    #             if intersection
-    #                 if both len(3)
-    #                     add set with those items
-    #                 if len(3) and len(4)
-    #                     for len(4) check where it overlaps
-    #                     and pick furthest item from that in len(4)
-    #                 if both len(4)
-    #                     for len(4) check where it overlaps for both
-    #                     and pick furthest item from that in both len(4)
-    #             if perpendicular
-    #                 if both len(3)
-    #                     pick the furthest item from perpendicular line
-    #                 if len(3) and len(4)
-    #                     if len(3) is current line
-    #                         pick the furthest 2 items from perpendicular line
-    #                     if len(4) is current line
-    #                         pick the furthest item from perpendicular line
-    #                 if both len(4)
-    #                     pick the furthest 2 items from perpendicular line
-    #                     pick the furthest item from current line
 
 def check_matches():
     global board, dropping, has_matched, should_undo, matches, coords, enabled
@@ -158,41 +201,13 @@ def check_matches():
         return
     has_matched = False
 
-    for y in range(rows):
-        temp_x = []
-        last_type = 0
-        for x in range(columns):
-            if board[x][y] != 0:
-                if len(temp_x) == 5:
-                    matches[5].append(temp_x)
-                    fill_coords(temp_x)
-                    has_matched = True
-                    should_undo = False
-                    temp_x = []
-                if board[x][y] == last_type:
-                    temp_x.append((x, y))
-                else:
-                    if len(temp_x) >= 3:
-                        matches[len(temp_x)].append(temp_x)
-                        fill_coords(temp_x)
-                        has_matched = True
-                        should_undo = False
-                    temp_x = []
-                    temp_x.append((x, y))
-                    last_type = board[x][y]
-        if len(temp_x) >= 3:
-            matches[len(temp_x)].append(temp_x)
-            fill_coords(temp_x)
-            has_matched = True
-            should_undo = False
-
     for x in range(columns):
         temp_y = []
         last_type = 0
         for y in range(rows):
             if board[x][y] != 0:
                 if len(temp_y) == 5:
-                    matches[5].append(temp_y)
+                    matches[5].append(temp_y[:])
                     fill_coords(temp_y)
                     has_matched = True
                     should_undo = False
@@ -201,7 +216,7 @@ def check_matches():
                     temp_y.append((x, y))
                 else:
                     if len(temp_y) >= 3:
-                        matches[len(temp_y)].append(temp_y)
+                        matches[len(temp_y)].append(temp_y[:])
                         fill_coords(temp_y)
                         has_matched = True
                         should_undo = False
@@ -209,33 +224,57 @@ def check_matches():
                     temp_y.append((x, y))
                     last_type = board[x][y]
         if len(temp_y) >= 3:
-            matches[len(temp_y)].append(temp_y)
+            matches[len(temp_y)].append(temp_y[:])
             fill_coords(temp_y)
             has_matched = True
             should_undo = False
 
-    # if 2 len(3) lines overlap
-    #     add their items in matches['special']
-    #     remove those items from matches[3]
-    # if a len(3) line overlaps with a len(4) line
-    #     depending on where the overlap is on the len(4) line
-    #         add all items from the len(4) line except for the furthest one from overlap ([0,1] - 3, [2,3] - 0)
-    #         add the items from the len(3) line
-    # if 2 len(4) lines overlap
-    #     depending on where the overlap is on the len(4) lines
-    #         add all items from the len(4) lines except for the furthest ones from overlap ([0,1] - 3, [2,3] - 0)
-    
-    
+    for y in range(rows):
+        temp_x = []
+        last_type = 0
+        for x in range(columns):
+            if board[x][y] != 0:
+                if len(temp_x) == 5:
+                    matches[5].append(temp_x[:])
+                    fill_coords(temp_x)
+                    has_matched = True
+                    should_undo = False
+                    temp_x = []
+                if board[x][y] == last_type:
+                    temp_x.append((x, y))
+                else:
+                    if len(temp_x) >= 3:
+                        matches[len(temp_x)].append(temp_x[:])
+                        fill_coords(temp_x)
+                        has_matched = True
+                        should_undo = False
+                    temp_x = []
+                    temp_x.append((x, y))
+                    last_type = board[x][y]
+        if len(temp_x) >= 3:
+            matches[len(temp_x)].append(temp_x[:])
+            fill_coords(temp_x)
+            has_matched = True
+            should_undo = False
 
-    # clear combos
-    print('----------')
+    special_matches()
+
+    print('\n----------------------------------------')
     for key in matches.keys():
         print(f"{key}:")
         for match in matches[key]:
-            print(f"    {match}")
+            print(f"    {f"{match}"[1:-1]}")
             for v, h in match:
-                board[v][h] = 0
-    print('----------')
+                board[v][h] += 10
+        print()
+    print('----------------------------------------\n')
+
+def drop_tiles(x, y):
+    global board
+
+    for row in range(x, 0, -1):
+        board[row][y] = board[row-1][y]
+    board[0][y] = 0
 
 def check_gaps():
     global board, rotated, dropping
@@ -250,9 +289,9 @@ def check_gaps():
 def add_new_tiles():
     global board
 
-    for x in range(rows):
-        if board[0][x] == 0:
-            board[0][x] = random.randint(1, count)
+    for y in range(rows):
+        if board[0][y] == 0:
+            board[0][y] = random.randint(1, count)
            
 def cursor_status():
     global dropping, cursor, has_matched, enabled
@@ -278,12 +317,12 @@ def check_undo():
 
 def cycle():
     check_matches()
-    check_undo()
-    check_gaps()
-    add_new_tiles()
+    #check_undo()
+    #check_gaps()
+    #add_new_tiles()
     cursor_status()
 
 
-clock.schedule_interval(cycle, 0.5)
+cycle()#clock.schedule_interval(cycle, 0.1)
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pgzrun.go()
