@@ -110,77 +110,96 @@ def special_matches():
                 if curr_combo[0][0] != curr_combo[i][0]:
                     is_horizontal = False
                     break
-            if not is_horizontal:
-                continue
-            tiles_above = curr_combo[0][0]
-            tiles_below = rows-1 - curr_combo[0][0]
-            for i in range(key):
-                tile_x = curr_combo[i][0]
-                tile_y = curr_combo[i][1]
-                if coords[curr_combo[i]] == 2:
-                    temp = curr_combo[:]
-                    above = 0
-                    for n in range(1, min(tiles_above, 3)+1):
-                        if board[tile_x-n][tile_y] == board[tile_x][tile_y]:
-                            above += 1
-                            temp.append((tile_x-n, tile_y))
-                        else:
+            if is_horizontal:
+                tiles_above = curr_combo[0][0]
+                tiles_below = rows-1 - curr_combo[0][0]
+                for i in range(key):
+                    tile_x = curr_combo[i][0]
+                    tile_y = curr_combo[i][1]
+                    if coords[curr_combo[i]] == 2:
+                        temp = curr_combo[:]
+                        above = 0
+                        for n in range(1, min(tiles_above, 3)+1):
+                            if (tile_x-n, tile_y) in coords.keys():
+                                if coords[(tile_x-n, tile_y)] == 5:
+                                    break
+                            if board[tile_x-n][tile_y] == board[tile_x][tile_y]:
+                                above += 1
+                                temp.append((tile_x-n, tile_y))
+                            else:
+                                break
+                        below = 0
+                        for n in range(1, min(tiles_below, 3)+1):
+                            if (tile_x+n, tile_y) in coords.keys():
+                                if coords[(tile_x+n, tile_y)] == 5:
+                                    break
+                            if board[tile_x+n][tile_y] == board[tile_x][tile_y]:
+                                below += 1
+                                temp.append((tile_x+n, tile_y))
+                            else:
+                                break
+                
+                        if 2 < above+below+1 and above+below+1 < 5:
+                            removals = []
+                            for temp_key in range(4, 2, -1):
+                                for j in range(len(matches[temp_key])):
+                                    for item in temp:
+                                        if item in matches[temp_key][j]:
+                                            removals.insert(0, j)
+                                            break
+                            for thing in removals:
+                                matches[temp_key].remove(matches[temp_key][thing])
+                            matches['special'].append(temp[:])
                             break
-                    below = 0
-                    for n in range(1, min(tiles_below, 3)+1):
-                        if board[tile_x+n][tile_y] == board[tile_x][tile_y]:
-                            below += 1
-                            temp.append((tile_x+n, tile_y))
-                        else:
+            else:
+                left_tiles = curr_combo[0][1]
+                right_tiles = columns-1 - curr_combo[0][1]
+                for i in range(key):
+                    tile_x = curr_combo[i][0]
+                    tile_y = curr_combo[i][1]
+                    if coords[curr_combo[i]] == 2:
+                        temp = curr_combo[:]
+                        left = 0
+                        for n in range(1, min(left_tiles, 3)+1):
+                            if (tile_x, tile_y-n) in coords.keys():
+                                if coords[(tile_x, tile_y-n)] == 5:
+                                    break
+                            if board[tile_x][tile_y-n] == board[tile_x][tile_y]:
+                                left += 1
+                                temp.append((tile_x, tile_y-n))
+                            else:
+                                break
+                        right = 0
+                        for n in range(1, min(right_tiles, 3)+1):
+                            if (tile_x, tile_y+n) in coords.keys():
+                                if coords[(tile_x, tile_y+n)] == 5:
+                                    break
+                            if board[tile_x][tile_y+n] == board[tile_x][tile_y]:
+                                right += 1
+                                temp.append((tile_x, tile_y+n))
+                            else:
+                                break
+                
+                        if 2 < left+right+1 and left+right+1 < 5:
+                            removals = []
+                            for temp_key in range(4, 2, -1):
+                                for j in range(len(matches[temp_key])):
+                                    for item in temp:
+                                        if item in matches[temp_key][j]:
+                                            removals.insert(0, j)
+                                            break
+                            for thing in removals:
+                                matches[temp_key].remove(matches[temp_key][thing])
+                            matches['special'].append(temp[:])
                             break
-
-                    if 2 < above+below+1 and above+below+1 < 5:
-                        removals = []
-                        for temp_key in range(4, 2, -1):
-                            for j in range(len(matches[temp_key])):
-                                for item in temp:
-                                    if item in matches[temp_key][j]:
-                                        removals.insert(0, j)
-                                        break
-                        for thing in removals:
-                            matches[temp_key].remove(matches[temp_key][thing])
-                        matches['special'].append(temp[:])
-                        #for i in range(len(temp)):
-                        #    print(f"----- {temp[i]} -----")
-                        # somehow skip to the next iteration
-                else:
-                        pass
-
-    #        if there's any len(3) line combo intersecting/perpendicular
-    #        check if it's actually a len(4) by checking the item right before and right after the found len(3)
-    #            if found combo is intersecting curr_combo
-    #                if both are len(3)
-    #                    add those items to set
-    #                if one is len(3) and one is len(4)
-    #                    add all items from len(3) to set
-    #                    for len(4), check where it overlaps
-    #                    add all its items to set, except the furthest from intersection
-    #                if both are len(4)
-    #                    check where it overlaps for both
-    #                    add all their items to set, except the furthest ones from intersection
-    #            if found combo is perpendicular to curr_combo
-    #                if both are len(3)
-    #                    for current combo, add all its items to set
-    #                    for found combo, add all its items to set, except the furthest from curr_combo
-    #                if one is len(3) and one is len(4)
-    #                    if len(3) is current combo
-    #                        for current combo, add all its items to set
-    #                        for found combo, add all its items to set, except the 2 furthest from curr_combo
-    #                    if len(4) is current line
-    #                        for current combo, add all its items to set, except the furthest from perpendicular combo
-    #                        for found combo, add all its items to set, except the furthest from curr_combo
-    #                if both are len(4)
-    #                    for current combo, add all its items to set, except the furthest from perpendicular combo
-    #                    for found combo, add all its items to set, except the 2 furthest from curr_combo
 
 def fill_coords(temp):
     global coords
     
+    if len(temp) == 5:
+        for thing in temp:
+            coords[thing] = 5
+
     for thing in temp:
         if thing in coords.keys():
             coords[thing] += 1
@@ -205,6 +224,9 @@ def check_matches():
         temp_y = []
         last_type = 0
         for y in range(rows):
+            if (x, y) in coords.keys():
+                if coords[(x, y)] == 5:
+                    continue
             if board[x][y] != 0:
                 if len(temp_y) == 5:
                     matches[5].append(temp_y[:])
@@ -233,6 +255,9 @@ def check_matches():
         temp_x = []
         last_type = 0
         for x in range(columns):
+            if (x, y) in coords.keys():
+                if coords[(x, y)] == 5:
+                    continue
             if board[x][y] != 0:
                 if len(temp_x) == 5:
                     matches[5].append(temp_x[:])
@@ -317,12 +342,12 @@ def check_undo():
 
 def cycle():
     check_matches()
-    #check_undo()
-    #check_gaps()
-    #add_new_tiles()
+    check_undo()
+    check_gaps()
+    add_new_tiles()
     cursor_status()
 
 
-cycle()#clock.schedule_interval(cycle, 0.1)
+clock.schedule_interval(cycle, 0.1)
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pgzrun.go()
