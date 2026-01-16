@@ -12,8 +12,8 @@ TITLE = 'game'
 WIDTH = (rows+2) * tile_size
 HEIGHT = (columns+2) * tile_size
 
-offset = tile_size*1.5
-cursor = Actor('disabled_h', topleft = (offset, offset))
+offset = tile_size
+cursor = Actor('disabled_h', topleft = (offset, offset*1.5))
 img = Image.open('images/bg.png')
 img = img.resize((WIDTH, HEIGHT))
 img = img.save('images/resized.png')
@@ -22,15 +22,17 @@ bg = Actor('resized')
 rotated = False
 pos_x, pos_y = 0, 0
 enabled = False
+
 dropping = False
 has_matched = False
 pending_undo = False
 should_undo = False
 matches = {}
 coords = {}
+scores = {5:50, 'special':25, 4:10, 3:5}
+curr_score = 0
 
 board = []
-thing = 6
 for row in range(columns):
     tiles = []
     for _ in range(rows):
@@ -45,12 +47,11 @@ def draw():
     for x in range(columns):
         for y in range(rows):
             tile = board[x][y]
-            if tile < 10:
-                screen.blit(f"cell{tile}", (y*tile_size+offset+2, x*tile_size+offset+2))
-                screen.blit(str(tile), (y*tile_size+offset, x*tile_size+offset))
-            else:
-                screen.blit(str(tile%10), (y*tile_size+offset, x*tile_size+offset))
+            if tile:
+                screen.blit(f"cell{tile}", (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
+                screen.blit(str(tile), (y*tile_size+offset, (x+0.5)*tile_size+offset))
     cursor.draw()
+    screen.draw.text(f"Score: {curr_score}", (WIDTH*0.32, 20), fontname = 'minecraft', fontsize = 50, color = (255, 255, 255), align = 'center', owidth = 1)
 
 def on_key_down(key):
     global board, rotated, pos_x, pos_y, enabled, cursor, pending_undo, should_undo
@@ -116,9 +117,10 @@ def special_matches():
                 for i in range(key):
                     tile_x = curr_combo[i][0]
                     tile_y = curr_combo[i][1]
+                    temp = curr_combo[:]
+                    above = 0
+                    below = 0
                     if coords[curr_combo[i]] == 2:
-                        temp = curr_combo[:]
-                        above = 0
                         for n in range(1, min(tiles_above, 3)+1):
                             if (tile_x-n, tile_y) in coords.keys():
                                 if coords[(tile_x-n, tile_y)] == 5:
@@ -128,7 +130,6 @@ def special_matches():
                                 temp.append((tile_x-n, tile_y))
                             else:
                                 break
-                        below = 0
                         for n in range(1, min(tiles_below, 3)+1):
                             if (tile_x+n, tile_y) in coords.keys():
                                 if coords[(tile_x+n, tile_y)] == 5:
@@ -138,17 +139,26 @@ def special_matches():
                                 temp.append((tile_x+n, tile_y))
                             else:
                                 break
-                
                         if 2 < above+below+1 and above+below+1 < 5:
-                            removals = []
                             for temp_key in range(4, 2, -1):
+                                removals = []
                                 for j in range(len(matches[temp_key])):
                                     for item in temp:
                                         if item in matches[temp_key][j]:
                                             removals.insert(0, j)
                                             break
-                            for thing in removals:
-                                matches[temp_key].remove(matches[temp_key][thing])
+                                for thing in removals:
+                                    matches[temp_key].remove(matches[temp_key][thing])
+                            if key == 4:
+                                if i < 2:
+                                    temp.remove(curr_combo[3])
+                                else:
+                                    temp.remove(curr_combo[0])
+                            if above+below+1 == 4:
+                                if above > below:
+                                    temp.remove((tile_x-above, tile_y))
+                                elif above < below:
+                                    temp.remove((tile_x+below, tile_y))
                             matches['special'].append(temp[:])
                             break
             else:
@@ -179,17 +189,26 @@ def special_matches():
                                 temp.append((tile_x, tile_y+n))
                             else:
                                 break
-                
                         if 2 < left+right+1 and left+right+1 < 5:
-                            removals = []
                             for temp_key in range(4, 2, -1):
+                                removals = []
                                 for j in range(len(matches[temp_key])):
                                     for item in temp:
                                         if item in matches[temp_key][j]:
                                             removals.insert(0, j)
                                             break
-                            for thing in removals:
-                                matches[temp_key].remove(matches[temp_key][thing])
+                                for thing in removals:
+                                    matches[temp_key].remove(matches[temp_key][thing])
+                            if key == 4:
+                                if i < 2:
+                                    temp.remove(curr_combo[3])
+                                else:
+                                    temp.remove(curr_combo[0])
+                            if left+right+1 == 4:
+                                if left > right:
+                                    temp.remove((tile_x, tile_y-left))
+                                elif left < right:
+                                    temp.remove((tile_x, tile_y+right))
                             matches['special'].append(temp[:])
                             break
 
@@ -199,6 +218,7 @@ def fill_coords(temp):
     if len(temp) == 5:
         for thing in temp:
             coords[thing] = 5
+        return
 
     for thing in temp:
         if thing in coords.keys():
@@ -207,7 +227,7 @@ def fill_coords(temp):
             coords[thing] = 1
 
 def check_matches():
-    global board, dropping, has_matched, should_undo, matches, coords, enabled
+    global board, dropping, has_matched, should_undo, matches, coords, enabled, curr_score
 
     matches = {}
     matches[5] = []
@@ -220,6 +240,66 @@ def check_matches():
         return
     has_matched = False
 
+    # 5 length line combos, can't overlap
+    # horizontal
+    for x in range(columns):
+        temp_y = []
+        last_type = 0
+        for y in range(rows):
+            if (x, y) in coords.keys():
+                if coords[(x, y)] == 5:
+                    temp_y = []
+                    last_type = board[x+1][y]
+                    continue
+            if board[x][y] != 0:
+                if len(temp_y) == 5:
+                    matches[5].append(temp_y[:])
+                    fill_coords(temp_y)
+                    has_matched = True
+                    should_undo = False
+                    temp_y = []
+                if board[x][y] == last_type:
+                    temp_y.append((x, y))
+                else:
+                    temp_y = []
+                    temp_y.append((x, y))
+                    last_type = board[x][y]
+        if len(temp_y) == 5:
+            matches[5].append(temp_y[:])
+            fill_coords(temp_y)
+            has_matched = True
+            should_undo = False
+            
+    # vertical
+    for y in range(rows):
+        temp_x = []
+        last_type = 0
+        for x in range(columns):
+            if (x, y) in coords.keys():
+                if coords[(x, y)] == 5:
+                    temp_x = []
+                    continue
+            if board[x][y] != 0:
+                if len(temp_x) == 5:
+                    matches[5].append(temp_x[:])
+                    fill_coords(temp_x)
+                    has_matched = True
+                    should_undo = False
+                    temp_x = []
+                if board[x][y] == last_type:
+                    temp_x.append((x, y))
+                else:
+                    temp_x = []
+                    temp_x.append((x, y))
+                    last_type = board[x][y]
+        if len(temp_x) == 5:
+            matches[5].append(temp_x[:])
+            fill_coords(temp_x)
+            has_matched = True
+            should_undo = False
+
+    # 3 and 4 length line combos, can overlap
+    # horizontal
     for x in range(columns):
         temp_y = []
         last_type = 0
@@ -228,8 +308,8 @@ def check_matches():
                 if coords[(x, y)] == 5:
                     continue
             if board[x][y] != 0:
-                if len(temp_y) == 5:
-                    matches[5].append(temp_y[:])
+                if len(temp_y) == 4:
+                    matches[4].append(temp_y[:])
                     fill_coords(temp_y)
                     has_matched = True
                     should_undo = False
@@ -251,6 +331,7 @@ def check_matches():
             has_matched = True
             should_undo = False
 
+    # vertical
     for y in range(rows):
         temp_x = []
         last_type = 0
@@ -259,8 +340,8 @@ def check_matches():
                 if coords[(x, y)] == 5:
                     continue
             if board[x][y] != 0:
-                if len(temp_x) == 5:
-                    matches[5].append(temp_x[:])
+                if len(temp_x) == 4:
+                    matches[4].append(temp_x[:])
                     fill_coords(temp_x)
                     has_matched = True
                     should_undo = False
@@ -284,15 +365,11 @@ def check_matches():
 
     special_matches()
 
-    print('\n----------------------------------------')
     for key in matches.keys():
-        print(f"{key}:")
         for match in matches[key]:
-            print(f"    {f"{match}"[1:-1]}")
             for v, h in match:
-                board[v][h] += 10
-        print()
-    print('----------------------------------------\n')
+                board[v][h] = 0
+            curr_score += scores[key]
 
 def drop_tiles(x, y):
     global board

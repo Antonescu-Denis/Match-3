@@ -31,8 +31,10 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="images\" />
+    <Folder Include="fonts\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="fonts\minecraft.ttf" />
     <Content Include="images\1.png" />
     <Content Include="images\2.png" />
     <Content Include="images\3.png" />
