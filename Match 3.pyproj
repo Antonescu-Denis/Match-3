@@ -5,7 +5,7 @@
     <ProjectGuid>b8d99a94-cf47-4844-8e97-b301ae3f94c7</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>game.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -27,11 +27,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="bot.py" />
-    <Compile Include="main.py" />
+    <Compile Include="game.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="images\" />
     <Folder Include="fonts\" />
+    <Folder Include="results\" />
+    <Folder Include="docs\" />
+    <Folder Include="data\" />
+    <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fonts\minecraft.ttf" />
@@ -42,6 +46,7 @@
     <Content Include="images\5.png" />
     <Content Include="images\6.png" />
     <Content Include="images\7.png" />
+    <Content Include="images\bg.png" />
     <Content Include="images\cell1.png" />
     <Content Include="images\cell2.png" />
     <Content Include="images\cell3.png" />
@@ -51,10 +56,9 @@
     <Content Include="images\cell7.png" />
     <Content Include="images\disabled_h.png" />
     <Content Include="images\disabled_v.png" />
+    <Content Include="images\resized.png" />
     <Content Include="images\select_h.png" />
     <Content Include="images\select_v.png" />
-    <Content Include="images\_bg.png" />
-    <Content Include="images\_resized.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

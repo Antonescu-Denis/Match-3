@@ -1,6 +1,6 @@
 import random, pgzrun
 from PIL import Image
-import os
+import os, csv
 
 
 rows = 11
@@ -29,8 +29,12 @@ pending_undo = False
 should_undo = False
 matches = {}
 coords = {}
+
 scores = {5:50, 'special':25, 4:10, 3:5}
 curr_score = 0
+swaps = 0
+finished = False
+clear_status = {True:'REACHED_TARGET', False:'NO_MOVES'}
 
 board = []
 for row in range(columns):
@@ -54,7 +58,7 @@ def draw():
     screen.draw.text(f"Score: {curr_score}", (WIDTH*0.32, 20), fontname = 'minecraft', fontsize = 50, color = (255, 255, 255), align = 'center', owidth = 1)
 
 def on_key_down(key):
-    global board, rotated, pos_x, pos_y, enabled, cursor, pending_undo, should_undo
+    global board, rotated, pos_x, pos_y, enabled, cursor, pending_undo, should_undo, swaps
 
     if not enabled:
         return
@@ -98,6 +102,7 @@ def on_key_down(key):
         enabled = False
         pending_undo = True
         should_undo = True
+    swaps += 1
 
 def special_matches():
     global board, dropping, has_matched, should_undo, matches, coords, enabled
@@ -417,11 +422,44 @@ def check_undo():
         should_undo = False
         cursor.image = 'select_v' if rotated else 'select_h'
 
+def reset():
+    global rotated, pos_x, pos_y, enabled, dropping
+    global has_matched, pending_undo, should_undo, matches, coords
+    global curr_score, swaps, finished, board, columns
+
+    rotated = False
+    pos_x, pos_y = 0, 0
+    enabled = False
+    
+    dropping = False
+    has_matched = False
+    pending_undo = False
+    should_undo = False
+    matches = {}
+    coords = {}
+    
+    curr_score = 0
+    swaps = 0
+    finished = False
+    
+    board = []
+    for row in range(columns):
+        tiles = []
+        for _ in range(rows):
+            tiles.append(random.randint(1, count))
+        board.append(tiles)
+
 def cycle():
-    check_matches()
-    check_undo()
-    check_gaps()
-    add_new_tiles()
+    global enabled, finished, play
+
+    if curr_score < 10000:
+        check_matches()
+        check_undo()
+        add_new_tiles()
+        check_gaps()
+    else:
+        finished = True
+        enabled = False
     cursor_status()
 
 
