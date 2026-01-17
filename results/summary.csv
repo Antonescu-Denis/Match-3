@@ -1,10 +1,15 @@
-from main import *
+import game, copy, csv
+import pyautogui as pag
 
 
+delay = 0.5
 matches_exist = False
 total_score = 0
 play = 1
 main_line, overlap_1, overlap_2 = False, False, False
+
+simulation = copy.deepcopy(game.board)
+
 
 def results():
     # csv:
@@ -16,9 +21,13 @@ def results():
     #   - moves_left - {10k-score if not finished else '-'}
     # total_score += curr_score
     # add 1 to play
+    # write/append results to summary.csv
     pass
 
-#   copy current board
+def swap(tile_1, tile_2):
+    game.board[tile_1[0]][tile_1[1]], game.board[tile_2[0]][tile_2[1]] = game.board[tile_2[0]][tile_2[1]], game.board[tile_1[0]][tile_1[1]]
+
+
 #   starting from (0, 0) and until (x-1, y-1)
 #       for each swap direction for current tile
 #           if swap already made or if both tiles are the same
