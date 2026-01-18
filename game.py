@@ -1,11 +1,11 @@
-import random, pgzrun, os, copy
+import random, pgzrun, os
 from pgzero.builtins import Actor, keys, clock
 from PIL import Image
 
 rows = 11
 columns = 11
 tile_size = 60
-count = 4
+count = 7
 
 TITLE = 'game'
 WIDTH = (rows+2) * tile_size
@@ -36,7 +36,7 @@ finished = False
 clear_status = {True:'REACHED_TARGET', False:'NO_MOVES'}
 
 board = []
-for row in range(columns):
+for _ in range(columns):
     tiles = []
     for _ in range(rows):
         tiles.append(random.randint(1, count))
@@ -53,6 +53,8 @@ def draw():
             if tile:
                 screen.blit(f"cell{tile}", (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
                 screen.blit(str(tile), (y*tile_size+offset, (x+0.5)*tile_size+offset))
+            else:
+                screen.blit('cell', (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
     cursor.draw()
     screen.draw.text(f"Score: {curr_score}", (WIDTH*0.32, 20), fontname = 'minecraft', fontsize = 50, color = (255, 255, 255), align = 'center', owidth = 1)
 
@@ -244,8 +246,6 @@ def check_matches():
         return
     has_matched = False
 
-    # 5 length line combos, can't overlap
-    # horizontal
     for x in range(columns):
         temp_y = []
         last_type = 0
@@ -274,7 +274,6 @@ def check_matches():
             has_matched = True
             should_undo = False
             
-    # vertical
     for y in range(rows):
         temp_x = []
         last_type = 0
@@ -302,8 +301,7 @@ def check_matches():
             has_matched = True
             should_undo = False
 
-    # 3 and 4 length line combos, can overlap
-    # horizontal
+
     for x in range(columns):
         temp_y = []
         last_type = 0
@@ -335,7 +333,6 @@ def check_matches():
             has_matched = True
             should_undo = False
 
-    # vertical
     for y in range(rows):
         temp_x = []
         last_type = 0
@@ -448,44 +445,61 @@ def reset():
             tiles.append(random.randint(1, count))
         board.append(tiles)
 
-def bot():
-    global board
 
-    simulated = copy.deepcopy(board)
+def bot():
+    global board, enabled, curr_score
+
+    if not enabled:
+        return
+
     matches_exist = False
     total_score = 0
     play = 1
-    long_line, overlap_1, overlap_2 = False, False, False
+    smol = []
+    highest = 0
+    
+    for x in range(columns):
+        for y in range(rows):
+            if y < rows-1:
+                if board[x][y] == board[x][y+1]:
+                    smol.append(((x, y), (x, y+1)))
+            if x < columns-1:
+                if board[x][y] == board[x+1][y]:
+                    smol.append(((x, y), (x+1, y)))
 
-    #   copy current board
-    #   starting from (0, 0) and until (x-1, y-1)
-    #       for each swap direction for current tile
-    #           if swap already made or if both tiles are the same
-    #               continue
-    #           if swap is horizontal
-    #               check 2 tiles above and below of each tile
-    #               check from 2 tiles left of first tile to 2 tiles right of the second tile
-    #               set appropriate flags for said lines
-    #           if swap is vertical
-    #               check 2 tiles left and right of each tile
-    #               check from 2 tiles above of first tile to 2 tiles below of the second tile
-    #               set appropriate flags for said lines
-    #           check flags for special matches
-    #               if perpendicular and (overlap_1 or overlap_2)
-    #                   check for special matches
-    #           if found matches
-    #               matches_exist = True
-    #               clear match
-    #               add score for that match
-    #               drop new items
-    #               check for any new matches and add scores for them
-    #               until no more matches are found
-    #           when new items stop falling
-    #           mark current swap as "already checked"
-    #           store score of current swap
-    #       pick swap with the highest score
-    # repeat until 10k score or until no matches exist
-    # write results to csv
+    for tiles in smol:
+        if tiles[0][0] == tiles[1][0]:
+            max_left = min(tiles[0][1], 3)
+            max_right = min(rows-1 - tiles[1][1], 3)
+            max_up = min(tiles[0][0], 2)
+            max_down = min(columns-1 - tiles[0][0], 2)
+
+            if max_left > 0:
+                diff = (tiles[0][0], tiles[0][1]-1)
+
+        elif tiles[0][1] == tiles[1][1]:
+            max_up = min(tiles[0][0], 3)
+            max_down = min(columns-1 - tiles[1][0], 3)
+            max_left = min(tiles[0][1], 2)
+            max_right = min(rows-1 - tiles[0][1], 2)
+
+
+
+    #print()
+    #for tile in smol:
+    #    print(f"{tile}")
+    #print('\n\n\n')
+
+    #   - scan board for any 2 tile combos
+    #       - look for different tiles on both ends
+    #       - from those, scan 1 tile in the other 3 directions
+    #           - in each direction a matching tile is found
+    #           - scan the next tile to see if it's also a matching tile
+    #   - based on how many are in each direction
+    #   - evaluate which swap to do for that 2 tile combo to create an actual match
+    #   - stop at the first 5 line combo found
+    enabled = False
+    curr_score = 10000
 
 def results():
     # csv:
@@ -499,6 +513,7 @@ def results():
     # add 1 to play
     pass
 
+
 def cycle():
     global enabled, finished, play
 
@@ -507,13 +522,13 @@ def cycle():
         check_undo()
         add_new_tiles()
         check_gaps()
-        #bot()
+        bot()
     else:
         finished = True
         enabled = False
     cursor_status()
 
 
-clock.schedule_interval(cycle, 1)
+clock.schedule_interval(cycle, 0.1)
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pgzrun.go()
