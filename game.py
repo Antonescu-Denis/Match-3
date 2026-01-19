@@ -31,9 +31,16 @@ coords = {}
 
 scores = {5:50, 'special':25, 4:10, 3:5}
 curr_score = 0
+total_score = 0
+play = 1
 swaps = 0
+total_swaps = 0
 finished = False
-clear_status = {True:'REACHED_TARGET', False:'NO_MOVES'}
+clear_status = 'REACHED_TARGET'
+
+turn = 'bot'
+bot_cell_1 = None
+bot_cell_2 = None
 
 board = []
 for _ in range(columns):
@@ -43,25 +50,32 @@ for _ in range(columns):
     board.append(tiles)
 
 def draw():
-    global board
+    global board, turn
 
     screen.clear()
     bg.draw()
     for x in range(columns):
         for y in range(rows):
+            if bot_cell_1 != None:
+                screen.blit('bot_cell', (bot_cell_1[1]*tile_size+offset+2, (bot_cell_1[0]+0.5)*tile_size+offset+2))
+            if bot_cell_2 != None:
+                screen.blit('bot_cell', (bot_cell_2[1]*tile_size+offset+2, (bot_cell_2[0]+0.5)*tile_size+offset+2))
+
             tile = board[x][y]
             if tile:
                 screen.blit(f"cell{tile}", (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
                 screen.blit(str(tile), (y*tile_size+offset, (x+0.5)*tile_size+offset))
             else:
                 screen.blit('cell', (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
-    cursor.draw()
+    if turn == 'player':
+        cursor.draw()
     screen.draw.text(f"Score: {curr_score}", (WIDTH*0.32, 20), fontname = 'minecraft', fontsize = 50, color = (255, 255, 255), align = 'center', owidth = 1)
 
 def on_key_down(key):
-    global board, rotated, pos_x, pos_y, enabled, cursor, pending_undo, should_undo, swaps
+    global cursor, pending_undo, should_undo, swaps, total_swaps
+    global board, rotated, pos_x, pos_y, enabled, turn
 
-    if not enabled:
+    if not enabled or turn == 'bot':
         return
 
     if (key == keys.LEFT or key == keys.A) and pos_y > 0:
@@ -104,6 +118,7 @@ def on_key_down(key):
         pending_undo = True
         should_undo = True
     swaps += 1
+    total_swaps += 1
 
 def special_matches():
     global board, dropping, has_matched, should_undo, matches, coords, enabled
@@ -233,7 +248,8 @@ def fill_coords(temp):
             coords[thing] = 1
 
 def check_matches():
-    global board, dropping, has_matched, should_undo, matches, coords, enabled, curr_score
+    global board, dropping, has_matched, should_undo, matches
+    global coords, enabled, curr_score, total_score
 
     matches = {}
     matches[5] = []
@@ -371,6 +387,8 @@ def check_matches():
             for v, h in match:
                 board[v][h] = 0
             curr_score += scores[key]
+            total_score += scores[key]
+    coords = {}
 
 def drop_tiles(x, y):
     global board
@@ -397,7 +415,10 @@ def add_new_tiles():
             board[0][y] = random.randint(1, count)
            
 def cursor_status():
-    global dropping, cursor, has_matched, enabled
+    global dropping, cursor, has_matched, enabled, turn
+
+    if turn == 'bot':
+        return
 
     if not dropping and not has_matched:
         enabled = True
@@ -407,7 +428,10 @@ def cursor_status():
         cursor.image = 'disabled_v' if rotated else 'disabled_h'
 
 def check_undo():
-    global dropping, pending_undo, should_undo
+    global dropping, pending_undo, should_undo, turn
+
+    if turn == 'bot':
+        return
 
     if not dropping and pending_undo and should_undo:
         if rotated:
@@ -419,9 +443,9 @@ def check_undo():
         cursor.image = 'select_v' if rotated else 'select_h'
 
 def reset():
-    global rotated, pos_x, pos_y, enabled, dropping
     global has_matched, pending_undo, should_undo, matches, coords
     global curr_score, swaps, finished, board, columns
+    global rotated, pos_x, pos_y, enabled, dropping
 
     rotated = False
     pos_x, pos_y = 0, 0
@@ -447,16 +471,22 @@ def reset():
 
 
 def bot():
-    global board, enabled, curr_score
+    global pending_undo, should_undo, clear_status, total_swaps
+    global board, enabled, scores, dropping, has_matched
+    global finished, turn, swaps
 
-    if not enabled:
+    if not dropping and not has_matched:
+        enabled = True
+    else:
+        enabled = False
+
+    if not enabled or turn == 'player':
         return
 
     matches_exist = False
-    total_score = 0
-    play = 1
     smol = []
     highest = 0
+    need_swap = []
     
     for x in range(columns):
         for y in range(rows):
@@ -468,38 +498,359 @@ def bot():
                     smol.append(((x, y), (x+1, y)))
 
     for tiles in smol:
+        tile_type = board[tiles[0][0]][tiles[0][1]]
         if tiles[0][0] == tiles[1][0]:
             max_left = min(tiles[0][1], 3)
             max_right = min(rows-1 - tiles[1][1], 3)
             max_up = min(tiles[0][0], 2)
             max_down = min(columns-1 - tiles[0][0], 2)
+            diff_x = tiles[0][0]
+            diff_y = tiles[0][1]-1
 
             if max_left > 0:
-                diff = (tiles[0][0], tiles[0][1]-1)
+                left = 0
+                up_1 = 0
+                down_1 = 0
 
+                for i in range(1, max_left+1):
+                    if board[diff_x][diff_y-i] == tile_type:
+                        left += 1
+                    else:
+                        break
+                for i in range(1, max_up+1):
+                    if board[diff_x-i][diff_y] == tile_type:
+                        up_1 += 1
+                    else:
+                        break
+                for i in range(1, max_down+1):
+                    if board[diff_x+i][diff_y] == tile_type:
+                        down_1 += 1
+                    else:
+                        break
+
+                if left == 2:
+                    if up_1 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                        matches_exist = True
+                    elif down_1 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                        matches_exist = True
+                elif highest < scores['special']:
+                    if up_1 == 2:
+                        if left == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                        elif down_1 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                    elif down_1 == 2:
+                        if left == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                        elif up_1 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                    elif up_1 == 1 and down_1 == 1:
+                        if left == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                elif highest < scores[4]:
+                    if left == 1:
+                        if up_1 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                        elif down_1 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                        else:
+                            highest = scores[3]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                elif highest < scores[3]:
+                    if up_1 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                        matches_exist = True
+                    elif down_1 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                        matches_exist = True
+            if highest == scores[5]:
+                break
+
+            if max_right > 0:
+                right = 0
+                up_2 = 0
+                down_2 = 0
+
+                for i in range(1, max_right+1):
+                    if board[diff_x][diff_y+i] == tile_type:
+                        right += 1
+                    else:
+                        break
+                for i in range(1, max_up+1):
+                    if board[diff_x-i][diff_y] == tile_type:
+                        up_2 += 1
+                    else:
+                        break
+                for i in range(1, max_down+1):
+                    if board[diff_x+i][diff_y] == tile_type:
+                        down_2 += 1
+                    else:
+                        break
+
+                if right == 2:
+                    if up_2 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                        matches_exist = True
+                    elif down_2 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                        matches_exist = True
+                elif highest < scores['special']:
+                    if up_2 == 2:
+                        if right == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                        elif down_2 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                    elif down_2 == 2:
+                        if right == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                        elif up_2 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                    elif up_2 == 1 and down_2 == 1:
+                        if right == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                elif highest < scores[4]:
+                    if right == 1: 
+                        if up_2 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                        elif down_2 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                        else:
+                            highest = scores[3]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                elif highest < scores[3]:
+                    if up_2 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                        matches_exist = True
+                    elif down_2 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                        matches_exist = True
+            if highest == scores[5]:
+                break
         elif tiles[0][1] == tiles[1][1]:
             max_up = min(tiles[0][0], 3)
             max_down = min(columns-1 - tiles[1][0], 3)
             max_left = min(tiles[0][1], 2)
             max_right = min(rows-1 - tiles[0][1], 2)
+            diff_x = tiles[0][0]
+            diff_y = tiles[0][1]-1
 
+            if max_up > 0:
+                up = 0
+                left_1 = 0
+                right_1 = 0
 
+                for i in range(1, max_up+1):
+                    if board[diff_x-i][diff_y] == tile_type:
+                        up += 1
+                    else:
+                        break
+                for i in range(1, max_left+1):
+                    if board[diff_x][diff_y-i] == tile_type:
+                        left_1 += 1
+                    else:
+                        break
+                for i in range(1, max_right+1):
+                    if board[diff_x][diff_y+i] == tile_type:
+                        right_1 += 1
+                    else:
+                        break
 
-    #print()
-    #for tile in smol:
-    #    print(f"{tile}")
-    #print('\n\n\n')
+                if up == 2:
+                    if left_1 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                        matches_exist = True
+                    elif right_1 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                        matches_exist = True
+                elif highest < scores['special']:
+                    if left_1 == 2:
+                        if up == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                        elif right_1 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                    elif right_1 == 2:
+                        if up == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                        elif left_1 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                    elif left_1 == 1 and right_1 == 1:
+                        if up == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                elif highest < scores[4]:
+                    if up == 1:
+                        if left_1 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                        elif right_1 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                        else:
+                            highest = scores[3]
+                            need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
+                            matches_exist = True
+                elif highest < scores[3]:
+                    if left_1 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                        matches_exist = True
+                    elif right_1 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                        matches_exist = True
+            if highest == scores[5]:
+                break
 
-    #   - scan board for any 2 tile combos
-    #       - look for different tiles on both ends
-    #       - from those, scan 1 tile in the other 3 directions
-    #           - in each direction a matching tile is found
-    #           - scan the next tile to see if it's also a matching tile
-    #   - based on how many are in each direction
-    #   - evaluate which swap to do for that 2 tile combo to create an actual match
-    #   - stop at the first 5 line combo found
+            if max_down > 0:
+                down = 0
+                left_2 = 0
+                right_2 = 0
+
+                for i in range(1, max_down+1):
+                    if board[diff_x+i][diff_y] == tile_type:
+                        down += 1
+                    else:
+                        break
+                for i in range(1, max_left+1):
+                    if board[diff_x][diff_y-i] == tile_type:
+                        left_2 += 1
+                    else:
+                        break
+                for i in range(1, max_right+1):
+                    if board[diff_x][diff_y+i] == tile_type:
+                        right_2 += 1
+                    else:
+                        break
+
+                if down == 2:
+                    if left_2 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                        matches_exist = True
+                    elif right_2 > 0:
+                        highest = scores[5]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                        matches_exist = True
+                elif highest < scores['special']:
+                    if left_2 == 2:
+                        if down == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                        elif right_2 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                    elif right_2 == 2:
+                        if down == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                        elif left_2 > 0:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                    elif left_2 == 1 and right_2 == 1:
+                        if down == 1:
+                            highest = scores['special']
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                elif highest < scores[4]:
+                    if down == 1:
+                        if left_2 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                            matches_exist = True
+                        elif right_2 > 0:
+                            highest = scores[4]
+                            need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                            matches_exist = True
+                        else:
+                            highest = scores[3]
+                            need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
+                            matches_exist = True
+                elif highest < scores[3]:
+                    if left_2 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
+                        matches_exist = True
+                    elif right_2 > 0:
+                        highest = scores[3]
+                        need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
+                        matches_exist = True
+            if highest == scores[5]:
+                break
+
+    if matches_exist:
+        # edge case for the other 3 tile combo pattern
+        # if 3 tile match, return
+        pass
+
+    if matches_exist:
+        board[need_swap[0][0]][need_swap[0][1]], board[need_swap[1][0]][need_swap[1][1]] = board[need_swap[1][0]][need_swap[1][1]], board[need_swap[0][0]][need_swap[0][1]]
+
+        pending_undo = True
+        should_undo = True
+        swaps += 1
+        total_swaps += 1
+    else:
+        finished = True
+        clear_status = 'NO_MOVES'
+        results()
     enabled = False
-    curr_score = 10000
 
 def results():
     # csv:
@@ -507,26 +858,27 @@ def results():
     #   - score - {curr_score}
     #   - swaps - {swaps}
     #   - finished - {finished}
-    #   - why_stopped - {clear_status[finished]}
+    #   - why_stopped - {clear_status}
     #   - moves_left - {10k-score if not finished else '-'}
     # total_score += curr_score
     # add 1 to play
+    # reset()
     pass
 
 
 def cycle():
-    global enabled, finished, play
+    global enabled, finished, play, curr_score
 
-    if curr_score < 10000:
+    if not finished:
+        if curr_score >= 10000:
+            finished = True
+            results()
         check_matches()
         check_undo()
         add_new_tiles()
         check_gaps()
+        cursor_status()
         bot()
-    else:
-        finished = True
-        enabled = False
-    cursor_status()
 
 
 clock.schedule_interval(cycle, 0.1)
