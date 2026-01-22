@@ -42,16 +42,30 @@ turn = 'bot'
 bot_cell_1 = None
 bot_cell_2 = None
 
-board = []
-for _ in range(columns):
-    tiles = []
-    for _ in range(rows):
-        tiles.append(random.randint(2, count))
-    board.append(tiles)
-board[9][0] = 1
-board[10][1] = 1
-board[9][2] = 1
-board[9][3] = 1
+board = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+         [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]]
+         #[0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0],
+         #[0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+         #[1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+         #[0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]]
+#for _ in range(columns):
+#    tiles = []
+#    for _ in range(rows):
+#        tiles.append(random.randint(2, count))
+#    board.append(tiles)
+for i in range(columns):
+    for j in range(rows):
+        if board[i][j] == 0:
+           board[i][j] = random.randint(2, count)
 
 def draw():
     global board, turn
@@ -476,7 +490,7 @@ def reset():
 def bot():
     global board, enabled, scores, dropping, has_matched
     global pending_undo, should_undo, clear_status
-    global finished, turn, swaps, total_swaps
+    global finished, turn, swaps, total_swaps, bot_cell_1, bot_cell_2
 
     if not dropping and not has_matched:
         enabled = True
@@ -501,21 +515,23 @@ def bot():
                     smol.append(((x, y), (x+1, y)))
 
     for tiles in smol:
-        tile_type = board[tiles[0][0]][tiles[0][1]]
-        if tiles[0][0] == tiles[1][0]:
-            max_left = min(tiles[0][1], 3)
-            max_right = min(rows-1 - tiles[1][1], 3)
-            max_up = min(tiles[0][0], 2)
-            max_down = min(columns-1 - tiles[0][0], 2)
+        x1, y1 = tiles[0]
+        x2, y2 = tiles[1]
+        tile_type = board[x1][y1]
+        if x1 == x2:
+            max_left = min(y1, 3)
+            max_right = min(rows-1 - y2, 3)
+            max_up = min(x1, 2)
+            max_down = min(columns-1 - x1, 2)
 
             if max_left > 0:
                 left = 0
                 up_1 = 0
                 down_1 = 0
-                diff_x = tiles[0][0]
-                diff_y = tiles[0][1]-1
+                diff_x = x1
+                diff_y = y1-1
 
-                for i in range(1, max_left+1):
+                for i in range(1, max_left):
                     if board[diff_x][diff_y-i] == tile_type:
                         left += 1
                     else:
@@ -540,7 +556,7 @@ def bot():
                         highest = scores[5]
                         need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                         matches_exist = True
-                elif highest < scores['special']:
+                if highest < scores['special']:
                     if up_1 == 2:
                         if left == 1:
                             highest = scores['special']
@@ -564,7 +580,7 @@ def bot():
                             highest = scores['special']
                             need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
                             matches_exist = True
-                elif highest < scores[4]:
+                if highest < scores[4]:
                     if left == 1:
                         if up_1 > 0:
                             highest = scores[4]
@@ -574,7 +590,7 @@ def bot():
                             highest = scores[4]
                             need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                             matches_exist = True
-                elif highest < scores[3]:
+                if highest < scores[3]:
                     if left == 1:
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y-1)]
@@ -587,6 +603,7 @@ def bot():
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                         matches_exist = True
+                #print(f"horizontal left\n{tiles[0]}, {tiles[1]} - {highest}\n    left: {left}\n    up_1: {up_1}\n    down_1: {down_1}\n{need_swap}\n")
             if highest == scores[5]:
                 break
 
@@ -594,10 +611,10 @@ def bot():
                 right = 0
                 up_2 = 0
                 down_2 = 0
-                diff_x = tiles[1][0]
-                diff_y = tiles[1][1]+1
+                diff_x = x2
+                diff_y = y2+1
 
-                for i in range(1, max_right+1):
+                for i in range(1, max_right):
                     if board[diff_x][diff_y+i] == tile_type:
                         right += 1
                     else:
@@ -622,7 +639,7 @@ def bot():
                         highest = scores[5]
                         need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                         matches_exist = True
-                elif highest < scores['special']:
+                if highest < scores['special']:
                     if up_2 == 2:
                         if right == 1:
                             highest = scores['special']
@@ -646,7 +663,7 @@ def bot():
                             highest = scores['special']
                             need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                             matches_exist = True
-                elif highest < scores[4]:
+                if highest < scores[4]:
                     if right == 1: 
                         if up_2 > 0:
                             highest = scores[4]
@@ -656,7 +673,7 @@ def bot():
                             highest = scores[4]
                             need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                             matches_exist = True
-                elif highest < scores[3]:
+                if highest < scores[3]:
                     if right == 1:
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
@@ -669,22 +686,23 @@ def bot():
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                         matches_exist = True
+                #print(f"horizontal right\n{tiles[0]}, {tiles[1]} - {highest}\n    right: {right}\n    up_2: {up_2}\n    down_2: {down_2}\n{need_swap}\n")
             if highest == scores[5]:
                 break
-        elif tiles[0][1] == tiles[1][1]:
-            max_up = min(tiles[0][0], 3)
-            max_down = min(columns-1 - tiles[1][0], 3)
-            max_left = min(tiles[0][1], 2)
-            max_right = min(rows-1 - tiles[0][1], 2)
+        elif y1 == y2:
+            max_up = min(x1, 3)
+            max_down = min(columns-1 - x2, 3)
+            max_left = min(y1, 2)
+            max_right = min(rows-1 - y1, 2)
 
             if max_up > 0:
                 up = 0
                 left_1 = 0
                 right_1 = 0
-                diff_x = tiles[0][0]-1
-                diff_y = tiles[0][1]
+                diff_x = x1-1
+                diff_y = y1
 
-                for i in range(1, max_up+1):
+                for i in range(1, max_up):
                     if board[diff_x-i][diff_y] == tile_type:
                         up += 1
                     else:
@@ -709,7 +727,7 @@ def bot():
                         highest = scores[5]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                         matches_exist = True
-                elif highest < scores['special']:
+                if highest < scores['special']:
                     if left_1 == 2:
                         if up == 1:
                             highest = scores['special']
@@ -733,7 +751,7 @@ def bot():
                             highest = scores['special']
                             need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
                             matches_exist = True
-                elif highest < scores[4]:
+                if highest < scores[4]:
                     if up == 1:
                         if left_1 > 0:
                             highest = scores[4]
@@ -743,7 +761,7 @@ def bot():
                             highest = scores[4]
                             need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                             matches_exist = True
-                elif highest < scores[3]:
+                if highest < scores[3]:
                     if up == 1:
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x-1, diff_y)]
@@ -756,6 +774,7 @@ def bot():
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                         matches_exist = True
+                #print(f"vertical up\n{tiles[0]}, {tiles[1]} - {highest}\n    up: {up}\n    left_1: {left_1}\n    right_1: {right_1}\n{need_swap}\n")
             if highest == scores[5]:
                 break
 
@@ -763,10 +782,10 @@ def bot():
                 down = 0
                 left_2 = 0
                 right_2 = 0
-                diff_x = tiles[0][0]+1
-                diff_y = tiles[0][1]
+                diff_x = x2+1
+                diff_y = y2
 
-                for i in range(1, max_down+1):
+                for i in range(1, max_down):
                     if board[diff_x+i][diff_y] == tile_type:
                         down += 1
                     else:
@@ -791,7 +810,7 @@ def bot():
                         highest = scores[5]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                         matches_exist = True
-                elif highest < scores['special']:
+                if highest < scores['special']:
                     if left_2 == 2:
                         if down == 1:
                             highest = scores['special']
@@ -815,7 +834,7 @@ def bot():
                             highest = scores['special']
                             need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
                             matches_exist = True
-                elif highest < scores[4]:
+                if highest < scores[4]:
                     if down == 1:
                         if left_2 > 0:
                             highest = scores[4]
@@ -825,7 +844,7 @@ def bot():
                             highest = scores[4]
                             need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                             matches_exist = True
-                elif highest < scores[3]:
+                if highest < scores[3]:
                     if down == 1:
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x+1, diff_y)]
@@ -838,15 +857,18 @@ def bot():
                         highest = scores[3]
                         need_swap = [(diff_x, diff_y), (diff_x, diff_y+1)]
                         matches_exist = True
+                #print(f"vertical down\n{tiles[0]}, {tiles[1]} - {highest}\n    down: {down}\n    left_2: {left_2}\n    right_2: {right_2}\n{need_swap}\n")
             if highest == scores[5]:
                 break
 
     if matches_exist:
-        # edge case for the other 3 tile combo pattern
-        # if 3 tile match, return
+        # edge case for the other 3 tile combo pattern without using 2 tile combo
+        # if found, return
         pass
 
     if matches_exist:
+        bot_cell_1 = (need_swap[0][0], need_swap[0][1])
+        bot_cell_2 = (need_swap[1][0], need_swap[1][1])
         board[need_swap[0][0]][need_swap[0][1]], board[need_swap[1][0]][need_swap[1][1]] = board[need_swap[1][0]][need_swap[1][1]], board[need_swap[0][0]][need_swap[0][1]]
 
         pending_undo = True
@@ -888,13 +910,6 @@ def cycle():
         bot()
 
 
-clock.schedule_interval(cycle, 0.1)
+clock.schedule_interval(cycle, 0.5)
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pgzrun.go()
-
-# all 3 tile combos
-# 
-# all vertical 4 combos
-# all horizontal 4 combos all right
-# 
-# horizontal 4 all left works
