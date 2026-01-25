@@ -42,30 +42,12 @@ turn = 'bot'
 bot_cell_1 = None
 bot_cell_2 = None
 
-board = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-         [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]]
-         #[0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0],
-         #[0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-         #[1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-         #[0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]]
-#for _ in range(columns):
-#    tiles = []
-#    for _ in range(rows):
-#        tiles.append(random.randint(2, count))
-#    board.append(tiles)
-for i in range(columns):
-    for j in range(rows):
-        if board[i][j] == 0:
-           board[i][j] = random.randint(2, count)
+board = []
+for _ in range(columns):
+    tiles = []
+    for _ in range(rows):
+        tiles.append(random.randint(2, count))
+    board.append(tiles)
 
 def draw():
     global board, turn
@@ -74,12 +56,12 @@ def draw():
     bg.draw()
     for x in range(columns):
         for y in range(rows):
+            tile = board[x][y]
             if bot_cell_1 != None:
                 screen.blit('bot_cell', (bot_cell_1[1]*tile_size+offset+2, (bot_cell_1[0]+0.5)*tile_size+offset+2))
             if bot_cell_2 != None:
                 screen.blit('bot_cell', (bot_cell_2[1]*tile_size+offset+2, (bot_cell_2[0]+0.5)*tile_size+offset+2))
 
-            tile = board[x][y]
             if tile:
                 screen.blit(f"cell{tile}", (y*tile_size+offset+2, (x+0.5)*tile_size+offset+2))
                 screen.blit(str(tile), (y*tile_size+offset, (x+0.5)*tile_size+offset))
@@ -861,10 +843,36 @@ def bot():
             if highest == scores[5]:
                 break
 
-    if matches_exist:
-        # edge case for the other 3 tile combo pattern without using 2 tile combo
-        # if found, return
-        pass
+    if not matches_exist:
+        found = False
+        for x in range(columns):
+            for y in range(rows-2):
+                if board[x][y] == board[x][y+2]:
+                    if x > 0:
+                        if board[x][y] == board[x-1][y+1]:
+                            found = True
+                            break
+                    if x < columns-1:
+                        if board[x][y] == board[x+1][y+1]:
+                            found = True
+                            break
+            if found:
+                break
+
+        if not found:
+            for y in range(rows):
+                for x in range(columns-2):
+                    if board[x][y] == board[x+2][y]:
+                        if y > 0:
+                            if board[x][y] == board[x+1][y-1]:
+                                found = True
+                                break
+                        if y < rows-1:
+                            if board[x][y] == board[x+1][y+1]:
+                                found = True
+                                break
+                if found:
+                    break
 
     if matches_exist:
         bot_cell_1 = (need_swap[0][0], need_swap[0][1])
