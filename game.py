@@ -1,7 +1,6 @@
 import random, pgzrun, os
 from pgzero.builtins import Actor, keys, clock
 from PIL import Image
-import csv
 
 rows = 11
 columns = 11
