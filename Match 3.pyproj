@@ -33,7 +33,6 @@
     <Folder Include="fonts\" />
     <Folder Include="results\" />
     <Folder Include="docs\" />
-    <Folder Include="data\" />
     <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
