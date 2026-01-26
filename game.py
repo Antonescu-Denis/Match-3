@@ -50,6 +50,9 @@ for _ in range(columns):
         tiles.append(random.randint(2, count))
     board.append(tiles)
 
+with open('results\\summary.csv', 'w') as file:
+    file.write('game_id,points,swaps,reached_target,stopping_reason')
+
 def draw():
     global board, turn
 
@@ -443,9 +446,9 @@ def check_undo():
         cursor.image = 'select_v' if rotated else 'select_h'
 
 def reset():
+    global curr_score, swaps, finished, board, columns, bot_cell_1, bot_cell_2
     global has_matched, pending_undo, should_undo, matches, coords
-    global curr_score, swaps, finished, board, columns
-    global rotated, pos_x, pos_y, enabled, dropping
+    global rotated, pos_x, pos_y, enabled, dropping, clear_status
 
     rotated = False
     pos_x, pos_y = 0, 0
@@ -458,9 +461,13 @@ def reset():
     matches = {}
     coords = {}
     
-    curr_score = 0
+    curr_score = 9500
     swaps = 0
     finished = False
+    clear_status = 'REACHED_TARGET'
+
+    bot_cell_1 = None
+    bot_cell_2 = None
     
     board = []
     for row in range(columns):
@@ -876,7 +883,7 @@ def bot():
         matches_exist = found
 
     if matches_exist:
-        bot_cell_1 = (need_swap[0][0], need_swap[0][1])
+        bot_cell_1 = (need_swap[0][0], need_swap[0][1]) 
         bot_cell_2 = (need_swap[1][0], need_swap[1][1])
         board[need_swap[0][0]][need_swap[0][1]], board[need_swap[1][0]][need_swap[1][1]] = board[need_swap[1][0]][need_swap[1][1]], board[need_swap[0][0]][need_swap[0][1]]
 
@@ -891,18 +898,18 @@ def bot():
     enabled = False
 
 def results():
-    # csv:
-    #   - game_id - {play}
-    #   - score - {curr_score}
-    #   - swaps - {swaps}
-    #   - finished - {finished}
-    #   - why_stopped - {clear_status}
-    #   - until_10k - {10k-score if not finished else '-'}
-    # total_score += curr_score
-    # add 1 to play
-    # reset()
-    pass
+    global play, swaps, finished, clear_status, curr_score, total_score, total_swaps
 
+    with open(f"tests\\{play}.csv", 'w') as file:
+        file.write('game_id,points,swaps,reached_target,stopping_reason\n')
+        file.write(f"{play},{curr_score},{swaps},{finished},{clear_status}")
+    with open('results\\summary.csv', 'a') as file:
+        file.write(f"\n{play},{curr_score},{swaps},{finished},{clear_status}")
+    total_score += curr_score
+    total_swaps += swaps
+    play += 1
+    reset()
+    pass
 
 def cycle():
     global enabled, finished, play, curr_score, board, bot_cell_1, bot_cell_2
@@ -932,6 +939,6 @@ def cycle():
         bot()
 
 
-clock.schedule_interval(cycle, 0.01)
+clock.schedule_interval(cycle, 0.001)
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pgzrun.go()

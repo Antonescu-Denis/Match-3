@@ -1,0 +1,2 @@
+game_id,points,swaps,reached_target,stopping_reason
+10,9500,0,True,NO_MOVES

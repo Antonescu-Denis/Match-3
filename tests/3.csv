@@ -1,0 +1,2 @@
+game_id,points,swaps,reached_target,stopping_reason
+3,10000,65,True,REACHED_TARGET

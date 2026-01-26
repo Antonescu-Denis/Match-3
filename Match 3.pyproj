@@ -60,6 +60,16 @@
     <Content Include="images\select_h.png" />
     <Content Include="images\select_v.png" />
     <Content Include="results\summary.csv" />
+    <Content Include="tests\1.csv" />
+    <Content Include="tests\10.csv" />
+    <Content Include="tests\2.csv" />
+    <Content Include="tests\3.csv" />
+    <Content Include="tests\4.csv" />
+    <Content Include="tests\5.csv" />
+    <Content Include="tests\6.csv" />
+    <Content Include="tests\7.csv" />
+    <Content Include="tests\8.csv" />
+    <Content Include="tests\9.csv" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
