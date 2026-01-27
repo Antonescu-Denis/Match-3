@@ -460,7 +460,7 @@ def reset():
     matches = {}
     coords = {}
     
-    curr_score = 9500
+    curr_score = 0
     swaps = 0
     finished = False
     clear_status = 'REACHED_TARGET'
@@ -917,17 +917,6 @@ def cycle():
         if curr_score >= 10000:
             finished = True
             results()
-            board = [[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3],
-                     [2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
-                     [3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1],
-                     [4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
-                     [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3],
-                     [2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
-                     [3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1],
-                     [4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
-                     [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3],
-                     [2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
-                     [3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1]]
             bot_cell_1 = None
             bot_cell_2 = None
         check_matches()
